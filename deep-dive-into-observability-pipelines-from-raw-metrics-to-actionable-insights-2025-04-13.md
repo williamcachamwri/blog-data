@@ -30,14 +30,15 @@ An observability pipeline is a dedicated infrastructure layer responsible for co
 
 ```mermaid
 graph LR
-    A[Application Servers] --> B(Collectors);
-    C[Databases] --> B;
-    D[Message Queues] --> B;
-    B --> E{Processors};
-    E --> F{Routers};
-    F --> G[Datadog];
-    F --> H[Prometheus];
-    F --> I[Object Storage (S3, GCS)];
+    A[Application Servers] --> B(Collectors)
+    C[Databases] --> B
+    D[Message Queues] --> B
+    B --> E{Processors}
+    E --> F{Routers}
+    F --> G[Datadog]
+    F --> H[Prometheus]
+    F --> I["Object Storage (S3 GCS)"]
+    
     style B fill:#f9f,stroke:#333,stroke-width:2px
     style E fill:#ccf,stroke:#333,stroke-width:2px
     style F fill:#cfc,stroke:#333,stroke-width:2px
