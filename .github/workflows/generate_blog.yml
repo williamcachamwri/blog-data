@@ -2,8 +2,8 @@ name: Generate Detailed Tech Blog with Gemini
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Tự động chạy mỗi 5 phút
-  workflow_dispatch:  # Cho phép chạy thủ công
+    - cron: '*/5 * * * *'  # Mỗi 5 phút
+  workflow_dispatch:
 
 jobs:
   generate-blog:
@@ -27,13 +27,14 @@ jobs:
         run: |
           python .github/scripts/gen_blog.py
 
-      - name: Check if changes exist
+      - name: Check for changes
         run: |
           git diff --exit-code || echo "Changes detected"
-      
-      - name: Commit and push blog if changes
+
+      - name: Commit and push blog if changes detected
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add .
-          git diff --exit-code || (git commit -m "Add new blog post" && git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/williamcachamwri/blog-data.git HEAD:main)
+          git add .  # Ensure all files are added
+          git commit -m "Add new blog post" || echo "No changes to commit"
+          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/williamcachamwri/blog-data.git HEAD:main
