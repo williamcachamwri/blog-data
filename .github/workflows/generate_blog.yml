@@ -27,10 +27,11 @@ jobs:
         run: |
           python .github/scripts/gen_blog.py
 
-      - name: Commit and push
+      - name: Commit and push blog
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add *.md
+          git add .
           git commit -m "Add new blog post"
-          git push
+          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/williamcachamwri/blog-data.git HEAD:main
+
