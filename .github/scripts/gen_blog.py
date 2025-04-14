@@ -7,16 +7,17 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 import requests
+import time
 
 # ==== CONFIG ====
-API_KEY = "AIzaSyAN67i3fle43CDcIT_Wmeo5p6cPfzD0Ku4"  # <-- Thay API key ông vào đây
+API_KEY = "AIzaSyAN67i3fle43CDcIT_Wmeo5p6cPfzD0Ku4"  # <-- Thay API key mày vô
 if not API_KEY:
     raise Exception("Missing GEMINI_API_KEY environment variable")
 
 today = datetime.now().strftime("%Y-%m-%d")
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
 
-# ==== PROMPT (hàng đỉnh) ====
+# ==== TAGS ====
 tags = [
     "backend", "frontend", "DevOps", "CI/CD", "observability", "logging", "monitoring", "serverless", "cloud",
     "load balancing", "microservices", "distributed tracing", "GraphQL", "REST API", "edge computing", "multi-cloud",
@@ -35,10 +36,17 @@ tags = [
     "static export", "DNSSEC", "PTR record"
 ]
 
-# Random chủ đề
-topic = random.choice(tags)
+# ==== FUNCTIONS ====
 
-prompt = f"""
+def slugify(value):
+    value = str(value)
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+    value = re.sub(r'[-\s]+', '-', value)
+    return value
+
+def generate_prompt(topic):
+    return f"""
 You are the world's most legendary technical writer for Gen Z engineers.
 
 Your mission:
@@ -46,14 +54,14 @@ Your mission:
 - The blog MUST BE ONLY in **Markdown** (.md) format. NO OTHER OUTPUT.
 - Begin with YAML Frontmatter:
 
+---
 
-
-⸻
-
-title: “Your Clickbait, Funny, Gen Z Style Title Here”
-date: “{today}”
+title: "Your Clickbait, Funny, Gen Z Style Title Here"
+date: "{today}"
 tags: [{topic}]
-description: “A mind-blowing blog post about {topic}, written for chaotic Gen Z engineers.”
+description: "A mind-blowing blog post about {topic}, written for chaotic Gen Z engineers."
+
+---
 
 - After frontmatter, use a bold, funny, brutally honest intro.
 - Cover deep technical concepts with:
@@ -67,30 +75,54 @@ description: “A mind-blowing blog post about {topic}, written for chaotic Gen 
 
 TONE RULES:
 - No corporate boring tone.
-- Full Gen Z chaotic energy, roast, memes, light dark jokes, playful insults.
-- Educational but stupidly entertaining.
-
-ONLY OUTPUT PURE MARKDOWN. NO JSON, NO TAGS, NO COMMENTS, NOTHING ELSE.
+- Full Gen Z chaotic energy.
 """
 
-# ==== REQUEST ====
-def generate_blog():
+def call_gemini_api(prompt):
     response = requests.post(API_URL, json={
         "contents": [{"parts": [{"text": prompt}]}]
     })
 
     if response.status_code != 200:
-        raise Exception(f"Request failed: {response.text}")
-
+        print("💀 API FAIL:", response.status_code, response.text)
+        return None
+    
     data = response.json()
-    text = data["candidates"][0]["content"]["parts"][0]["text"]
+    return data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text')
 
-    # Clean output (nếu cần)
-    text = re.sub(r'```markdown|```', '', text).strip()
+def save_blog(title, content):
+    slug = slugify(title)
+    filename = f"{slug}.md"
+    path = Path("blogs")
+    path.mkdir(exist_ok=True)
+    with open(path / filename, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"✅ Saved blog: {filename}")
 
-    output_path = Path("output.md")
-    output_path.write_text(text, encoding="utf-8")
+def extract_title(content):
+    match = re.search(r'^title:\s*"(.*?)"', content, re.MULTILINE)
+    if match:
+        return match.group(1)
+    else:
+        return f"Untitled-{random.randint(1000,9999)}"
 
-    print(f"Saved blog to {output_path.absolute()}")
+# ==== MAIN ====
 
-generate_blog()
+while True:
+    for i in range(10):
+        topic = random.choice(tags)
+        print(f"🔥 Generating blog {i+1}/10 about: {topic}...")
+
+        prompt = generate_prompt(topic)
+        content = call_gemini_api(prompt)
+
+        if content:
+            title = extract_title(content)
+            save_blog(title, content)
+        else:
+            print("💩 Failed to generate blog. Skipping...")
+        
+        time.sleep(2)  # Nghỉ xíu cho API đỡ chửi
+    
+    print("🎉 Generated 10 blogs! Restarting loop...\n")
+    time.sleep(5)  # Nghỉ 5s rồi làm tiếp
