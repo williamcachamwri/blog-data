@@ -1,23 +1,21 @@
-
 import os
 import re
 import json
 import random
 import unicodedata
+import time
 from datetime import datetime
 from pathlib import Path
 import requests
-import time
 
 # ==== CONFIG ====
-API_KEY = "AIzaSyAN67i3fle43CDcIT_Wmeo5p6cPfzD0Ku4"  # <-- Thay API key mày vô
+API_KEY = "AIzaSyAN67i3fle43CDcIT_Wmeo5p6cPfzD0Ku4"  # <-- Thay API key ông vào đây
 if not API_KEY:
     raise Exception("Missing GEMINI_API_KEY environment variable")
 
 today = datetime.now().strftime("%Y-%m-%d")
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
 
-# ==== TAGS ====
 tags = [
     "backend", "frontend", "DevOps", "CI/CD", "observability", "logging", "monitoring", "serverless", "cloud",
     "load balancing", "microservices", "distributed tracing", "GraphQL", "REST API", "edge computing", "multi-cloud",
@@ -36,17 +34,15 @@ tags = [
     "static export", "DNSSEC", "PTR record"
 ]
 
-# ==== FUNCTIONS ====
-
 def slugify(value):
     value = str(value)
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s-]', '', value).strip().lower()
-    value = re.sub(r'[-\s]+', '-', value)
-    return value
+    return re.sub(r'[-\s]+', '-', value)
 
 def generate_prompt(topic):
-    return f"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    prompt = f"""
 You are the world's most legendary technical writer for Gen Z engineers.
 
 Your mission:
@@ -75,54 +71,44 @@ description: "A mind-blowing blog post about {topic}, written for chaotic Gen Z 
 
 TONE RULES:
 - No corporate boring tone.
-- Full Gen Z chaotic energy.
+- Full Gen Z chaotic energy, roast, memes, light dark jokes, playful insults.
+- Educational but stupidly entertaining.
+
+ONLY OUTPUT PURE MARKDOWN. NO JSON, NO TAGS, NO COMMENTS, NOTHING ELSE.
 """
+    return prompt
 
-def call_gemini_api(prompt):
-    response = requests.post(API_URL, json={
-        "contents": [{"parts": [{"text": prompt}]}]
-    })
+def request_blog(topic):
+    prompt = generate_prompt(topic)
+    data = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
+    }
+    response = requests.post(API_URL, headers={"Content-Type": "application/json"}, json=data)
+    response.raise_for_status()
+    result = response.json()
 
-    if response.status_code != 200:
-        print("💀 API FAIL:", response.status_code, response.text)
-        return None
-    
-    data = response.json()
-    return data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text')
+    text = result["candidates"][0]["content"]["parts"][0]["text"]
+    title_search = re.search(r'title: "(.*?)"', text)
+    title = title_search.group(1) if title_search else "untitled"
+    return text, title
 
-def save_blog(title, content):
-    slug = slugify(title)
-    filename = f"{slug}.md"
-    path = Path("blogs")
-    path.mkdir(exist_ok=True)
-    with open(path / filename, "w", encoding="utf-8") as f:
+def save_blog(content, title):
+    filename = slugify(title) + ".md"
+    path = Path(filename)
+    with open(path, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"✅ Saved blog: {filename}")
 
-def extract_title(content):
-    match = re.search(r'^title:\s*"(.*?)"', content, re.MULTILINE)
-    if match:
-        return match.group(1)
-    else:
-        return f"Untitled-{random.randint(1000,9999)}"
-
 # ==== MAIN ====
-
-while True:
-    for i in range(10):
-        topic = random.choice(tags)
-        print(f"🔥 Generating blog {i+1}/10 about: {topic}...")
-
-        prompt = generate_prompt(topic)
-        content = call_gemini_api(prompt)
-
-        if content:
-            title = extract_title(content)
-            save_blog(title, content)
-        else:
-            print("💩 Failed to generate blog. Skipping...")
-        
-        time.sleep(2)  # Nghỉ xíu cho API đỡ chửi
-    
-    print("🎉 Generated 10 blogs! Restarting loop...\n")
-    time.sleep(5)  # Nghỉ 5s rồi làm tiếp
+for i in range(10):
+    topic = random.choice(tags)
+    print(f"🛠️ ({i+1}/10) Generating blog about: {topic}")
+    try:
+        content, title = request_blog(topic)
+        save_blog(content, title)
+        time.sleep(2)  # Delay nhẹ cho đỡ bị API nó tát sml
+    except Exception as e:
+        print(f"❌ Error generating blog: {e}")
+        time.sleep(5)
