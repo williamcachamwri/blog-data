@@ -9,7 +9,7 @@ from pathlib import Path
 import requests
 
 # ==== CONFIG ====
-API_KEY = "YOUR_GEMINI_API_KEY"  # <-- Thay API key ông vào đây
+API_KEY = "AIzaSyAN67i3fle43CDcIT_Wmeo5p6cPfzD0Ku4"  # <-- Thay API key ông vào đây
 if not API_KEY:
     raise Exception("Missing GEMINI_API_KEY environment variable")
 
