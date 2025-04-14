@@ -14,7 +14,7 @@ if not API_KEY:
     raise Exception("Missing GEMINI_API_KEY environment variable")
 
 today = datetime.now().strftime("%Y-%m-%d")
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro:generateContent?key={API_KEY}"
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
 
 # ==== PROMPT (hàng đỉnh) ====
 tags = [
